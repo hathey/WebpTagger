@@ -12,7 +12,7 @@ metadata, so they travel with the file and remain visible to other tools
 
 ```
 WebpTagger/
-├── WebpTagger.sln
+├── WebpTagger.slnx
 ├── .gitignore
 ├── README.md
 ├── docs/
@@ -204,7 +204,7 @@ thread via `async`/`await` so the UI remains responsive on large folders.
 ## Build
 
 ```
-dotnet build WebpTagger.sln
-dotnet test
+dotnet build WebpTagger.slnx
+dotnet test WebpTagger.slnx
 dotnet run --project src/WebpTagger.UI
 ```

@@ -36,7 +36,7 @@
 - [x] Add directory scanning tests
 
 ## Documentation
-- [ ] Create README.md
-- [ ] Document architecture
-- [ ] Document metadata format
-- [ ] Document UI usage
+- [x] Create README.md
+- [x] Document architecture
+- [x] Document metadata format
+- [x] Document UI usage
