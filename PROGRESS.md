@@ -14,12 +14,12 @@
 - [ ] Push initial commit
 
 ## UI
-- [ ] Create main form
-- [ ] Add directory picker
-- [ ] Add thumbnail grid
-- [ ] Add tag editor panel
-- [ ] Add tag list sidebar
-- [ ] Wire up events
+- [x] Create main form
+- [x] Add directory picker
+- [x] Add thumbnail grid
+- [x] Add tag editor panel
+- [x] Add tag list sidebar
+- [x] Wire up events
 
 ## Core Logic
 - [x] Implement WebP loader
