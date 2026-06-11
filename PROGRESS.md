@@ -30,10 +30,10 @@
 - [x] Implement tag save logic
 
 ## Testing
-- [ ] Create test project
-- [ ] Add metadata tests
-- [ ] Add tag list tests
-- [ ] Add directory scanning tests
+- [x] Create test project
+- [x] Add metadata tests
+- [x] Add tag list tests
+- [x] Add directory scanning tests
 
 ## Documentation
 - [ ] Create README.md
