@@ -10,8 +10,8 @@
 ## Repository Setup
 - [x] Create local folder
 - [x] Initialize Git repo
-- [ ] Create GitHub repo
-- [ ] Push initial commit
+- [x] Create GitHub repo
+- [x] Push initial commit
 
 ## UI
 - [x] Create main form
