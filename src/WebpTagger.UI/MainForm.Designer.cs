@@ -67,26 +67,25 @@ partial class MainForm
         topPanel.Controls.Add(btnOpenFolder);
         topPanel.Dock = DockStyle.Top;
         topPanel.Height = 42;
+        topPanel.Padding = new Padding(8, 7, 8, 7);
         //
         // btnOpenFolder
         //
-        btnOpenFolder.Location = new Point(8, 7);
-        btnOpenFolder.Size = new Size(110, 28);
+        btnOpenFolder.Dock = DockStyle.Left;
+        btnOpenFolder.Width = 110;
         btnOpenFolder.Text = "Open Folder...";
         //
         // btnSaveAll
         //
-        btnSaveAll.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        btnSaveAll.Location = new Point(892, 7);
-        btnSaveAll.Size = new Size(100, 28);
+        btnSaveAll.Dock = DockStyle.Right;
+        btnSaveAll.Width = 100;
         btnSaveAll.Text = "Save All";
         //
         // lblFolderPath
         //
-        lblFolderPath.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         lblFolderPath.AutoEllipsis = true;
-        lblFolderPath.Location = new Point(128, 12);
-        lblFolderPath.Size = new Size(754, 23);
+        lblFolderPath.Dock = DockStyle.Fill;
+        lblFolderPath.Padding = new Padding(8, 0, 8, 0);
         lblFolderPath.Text = "(no folder selected)";
         lblFolderPath.TextAlign = ContentAlignment.MiddleLeft;
         //
