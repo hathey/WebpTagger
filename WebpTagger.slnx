@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WebpTagger.Core/WebpTagger.Core.csproj" />
+    <Project Path="src/WebpTagger.UI/WebpTagger.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WebpTagger.Tests/WebpTagger.Tests.csproj" />
+  </Folder>
+</Solution>
