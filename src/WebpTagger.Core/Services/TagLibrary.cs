@@ -16,21 +16,12 @@ public sealed class TagLibrary
     /// <summary>All known tags, sorted case-insensitively.</summary>
     public IReadOnlyList<string> Tags => _tags.ToList();
 
-    /// <summary>Replaces the tag set with the union of tags from <paramref name="items"/>.</summary>
-    public void Rebuild(IEnumerable<ImageItem> items)
-    {
-        _tags.Clear();
-
-        foreach (var item in items)
-        {
-            foreach (var tag in item.Tags)
-            {
-                _tags.Add(tag);
-            }
-        }
-
-        Changed?.Invoke(this, EventArgs.Empty);
-    }
+    /// <summary>
+    /// Adds the union of tags from <paramref name="items"/> into the library. Tags already
+    /// known (e.g. persisted from a prior session, or seen in a previously-opened folder)
+    /// are kept, so switching folders only ever grows the known tag set.
+    /// </summary>
+    public void Rebuild(IEnumerable<ImageItem> items) => AddRange(items.SelectMany(item => item.Tags));
 
     /// <summary>
     /// Adds a tag to the library (e.g. when the user types a brand-new tag),
@@ -45,6 +36,41 @@ public sealed class TagLibrary
         }
 
         if (_tags.Add(trimmed))
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Adds multiple tags at once, raising <see cref="Changed"/> at most once if anything was added.</summary>
+    public void AddRange(IEnumerable<string> tags)
+    {
+        var changed = false;
+
+        foreach (var tag in tags)
+        {
+            var trimmed = tag.Trim();
+            if (!string.IsNullOrEmpty(trimmed) && _tags.Add(trimmed))
+            {
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Removes a tag from the library only (e.g. via the tag-list editor). Does not
+    /// affect any image's own tags. Returns true if the tag was known.
+    /// </summary>
+    public bool Remove(string tag)
+    {
+        if (_tags.Remove(tag))
         {
             Changed?.Invoke(this, EventArgs.Empty);
             return true;

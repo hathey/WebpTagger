@@ -1,3 +1,4 @@
+using WebpTagger.Core.Diagnostics;
 using WebpTagger.Core.Models;
 
 namespace WebpTagger.Core.Services;
@@ -40,10 +41,11 @@ public sealed class DirectoryScanner : IDirectoryScanner
             {
                 tags = await _taggingEngine.ReadTagsAsync(file, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // A corrupt or unreadable file shouldn't abort the whole scan;
                 // surface it with no tags so the user can still see/fix it.
+                DiagnosticsLog.Write($"ReadTags failed for \"{file}\": {ex.GetType().Name}: {ex.Message}");
                 tags = new List<string>();
             }
 

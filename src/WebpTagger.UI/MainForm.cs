@@ -1,3 +1,5 @@
+using System.Drawing.Drawing2D;
+using WebpTagger.Core.Diagnostics;
 using WebpTagger.Core.Models;
 using WebpTagger.Core.Services;
 
@@ -5,7 +7,7 @@ namespace WebpTagger.UI;
 
 public partial class MainForm : Form
 {
-    private const int ThumbnailSize = 128;
+    private const int MaxThumbnailSize = 256;
 
     private readonly ITaggingEngine _taggingEngine;
     private readonly IDirectoryScanner _directoryScanner;
@@ -13,6 +15,7 @@ public partial class MainForm : Form
     private readonly TagLibrary _tagLibrary;
 
     private readonly Dictionary<string, ListViewItem> _listViewItemsByPath = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Bitmap> _masterThumbnailsByPath = new(StringComparer.OrdinalIgnoreCase);
 
     private string? _currentFolder;
     private CancellationTokenSource? _loadCts;
@@ -26,44 +29,118 @@ public partial class MainForm : Form
         _thumbnailService = new ThumbnailService();
         _tagLibrary = new TagLibrary();
 
+        if (AppSettings.ZoomSize is { } savedZoomSize && savedZoomSize >= zoomTrackBar.Minimum && savedZoomSize <= zoomTrackBar.Maximum)
+        {
+            zoomTrackBar.Value = savedZoomSize;
+        }
+
         btnOpenFolder.Click += BtnOpenFolder_Click;
         btnSaveAll.Click += async (_, _) => await SaveAllAsync();
+        btnViewLogs.Click += (_, _) => new LogViewerForm().ShowDialog(this);
+        btnEditTags.Click += (_, _) => new TagLibraryEditorForm(_tagLibrary).ShowDialog(this);
         listViewImages.SelectedIndexChanged += ListViewImages_SelectedIndexChanged;
+        zoomTrackBar.ValueChanged += ZoomTrackBar_ValueChanged;
 
         tagEditorPanel.TagAdded += TagEditorPanel_TagAdded;
         tagEditorPanel.TagRemoved += TagEditorPanel_TagRemoved;
         tagListSidebar.ApplyTagRequested += TagListSidebar_ApplyTagRequested;
         _tagLibrary.Changed += TagLibrary_Changed;
+        _tagLibrary.AddRange(AppSettings.KnownTags);
 
         FormClosing += MainForm_FormClosing;
+        FormClosed += (_, _) => DisposeMasterThumbnails();
+        Load += MainForm_Load;
+
+        imageListThumbnails.ImageSize = new Size(zoomTrackBar.Value, zoomTrackBar.Value);
 
         UpdateSaveButtonState();
     }
 
+    private void ZoomTrackBar_ValueChanged(object? sender, EventArgs e)
+    {
+        ApplyZoom(zoomTrackBar.Value);
+        AppSettings.SaveZoomSize(zoomTrackBar.Value);
+    }
+
+    private void ApplyZoom(int size)
+    {
+        imageListThumbnails.ImageSize = new Size(size, size);
+
+        foreach (var (filePath, masterBitmap) in _masterThumbnailsByPath)
+        {
+            AddOrUpdateImageListEntry(filePath, masterBitmap);
+        }
+
+        listViewImages.Invalidate(true);
+    }
+
+    private void DisposeMasterThumbnails()
+    {
+        foreach (var bitmap in _masterThumbnailsByPath.Values)
+        {
+            bitmap.Dispose();
+        }
+
+        _masterThumbnailsByPath.Clear();
+    }
+
+    private async void MainForm_Load(object? sender, EventArgs e)
+    {
+        var lastFolder = AppSettings.LastFolder;
+        if (string.IsNullOrEmpty(lastFolder) || !Directory.Exists(lastFolder))
+        {
+            return;
+        }
+
+        try
+        {
+            await LoadFolderAsync(lastFolder);
+        }
+        catch (Exception ex)
+        {
+            btnOpenFolder.Enabled = true;
+            statusProgressBar.Visible = false;
+            DiagnosticsLog.Write($"Reopening last folder \"{lastFolder}\" failed: {ex.GetType().Name}: {ex.Message}");
+            MessageBox.Show(
+                this,
+                $"Could not reopen the last folder:\n\n{ex.Message}",
+                "WebpTagger - Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
     private async void BtnOpenFolder_Click(object? sender, EventArgs e)
     {
-        if (!await ConfirmDiscardChangesAsync())
+        try
         {
-            return;
+            if (!await ConfirmDiscardChangesAsync())
+            {
+                return;
+            }
+
+            // Avoids the OS folder browser, which walks the Windows shell namespace and can
+            // crash (STATUS_STACK_BUFFER_OVERRUN) on machines with a broken shell extension.
+            var selectedPath = FolderPickerDialog.Browse(this, _currentFolder);
+            if (selectedPath is null)
+            {
+                return;
+            }
+
+            await LoadFolderAsync(selectedPath);
         }
-
-        using var dialog = new FolderBrowserDialog
+        catch (Exception ex)
         {
-            Description = "Select a folder containing .webp images",
-            UseDescriptionForTitle = true,
-        };
-
-        if (!string.IsNullOrEmpty(_currentFolder))
-        {
-            dialog.SelectedPath = _currentFolder;
+            btnOpenFolder.Enabled = true;
+            statusProgressBar.Visible = false;
+            DiagnosticsLog.Write($"Opening folder failed: {ex.GetType().Name}: {ex.Message}");
+            MessageBox.Show(
+                this,
+                $"Could not open the selected folder:\n\n{ex.Message}",
+                "WebpTagger - Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
-
-        if (dialog.ShowDialog(this) != DialogResult.OK)
-        {
-            return;
-        }
-
-        await LoadFolderAsync(dialog.SelectedPath);
     }
 
     private async Task LoadFolderAsync(string folderPath)
@@ -78,8 +155,8 @@ public partial class MainForm : Form
         listViewImages.Items.Clear();
         imageListThumbnails.Images.Clear();
         _listViewItemsByPath.Clear();
+        DisposeMasterThumbnails();
         tagEditorPanel.SetSelection(Array.Empty<ImageItem>());
-        _tagLibrary.Clear();
 
         btnOpenFolder.Enabled = false;
         statusProgressBar.Visible = true;
@@ -113,6 +190,8 @@ public partial class MainForm : Form
             return;
         }
 
+        AppSettings.SaveLastFolder(folderPath);
+
         listViewImages.BeginUpdate();
         foreach (var item in items)
         {
@@ -141,12 +220,13 @@ public partial class MainForm : Form
             byte[] png;
             try
             {
-                png = await _thumbnailService.GetThumbnailAsync(item.FilePath, item.LastWriteTimeUtc, ThumbnailSize, cancellationToken);
+                png = await _thumbnailService.GetThumbnailAsync(item.FilePath, item.LastWriteTimeUtc, MaxThumbnailSize, cancellationToken);
             }
-            catch
+            catch (Exception ex)
             {
                 // Skip files that can't be decoded (e.g. corrupt image); they
                 // still show up in the grid without a thumbnail.
+                DiagnosticsLog.Write($"Thumbnail load failed for \"{item.FilePath}\": {ex.GetType().Name}: {ex.Message}");
                 continue;
             }
 
@@ -162,20 +242,45 @@ public partial class MainForm : Form
     private void SetThumbnail(ImageItem item, byte[] png)
     {
         using var memoryStream = new MemoryStream(png);
-        using var loaded = Image.FromStream(memoryStream);
-        var bitmap = new Bitmap(loaded);
+        var bitmap = new Bitmap(Image.FromStream(memoryStream));
 
-        if (imageListThumbnails.Images.ContainsKey(item.FilePath))
+        if (_masterThumbnailsByPath.Remove(item.FilePath, out var previous))
         {
-            imageListThumbnails.Images.RemoveByKey(item.FilePath);
+            previous.Dispose();
         }
 
-        imageListThumbnails.Images.Add(item.FilePath, bitmap);
+        _masterThumbnailsByPath[item.FilePath] = bitmap;
+        AddOrUpdateImageListEntry(item.FilePath, bitmap);
 
         if (_listViewItemsByPath.TryGetValue(item.FilePath, out var listViewItem))
         {
             listViewItem.ImageKey = item.FilePath;
         }
+    }
+
+    private void AddOrUpdateImageListEntry(string filePath, Image masterImage)
+    {
+        using var scaled = ScaleToFit(masterImage, imageListThumbnails.ImageSize);
+
+        if (imageListThumbnails.Images.ContainsKey(filePath))
+        {
+            imageListThumbnails.Images.RemoveByKey(filePath);
+        }
+
+        imageListThumbnails.Images.Add(filePath, scaled);
+    }
+
+    private static Bitmap ScaleToFit(Image source, Size targetSize)
+    {
+        var scale = Math.Min((double)targetSize.Width / source.Width, (double)targetSize.Height / source.Height);
+        var width = Math.Max(1, (int)Math.Round(source.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+        var bitmap = new Bitmap(targetSize.Width, targetSize.Height);
+        using var graphics = Graphics.FromImage(bitmap);
+        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        graphics.DrawImage(source, (targetSize.Width - width) / 2, (targetSize.Height - height) / 2, width, height);
+        return bitmap;
     }
 
     private void ListViewImages_SelectedIndexChanged(object? sender, EventArgs e)
@@ -220,6 +325,7 @@ public partial class MainForm : Form
     {
         tagListSidebar.SetTags(_tagLibrary.Tags);
         tagEditorPanel.SetSuggestions(_tagLibrary.Tags);
+        AppSettings.SaveKnownTags(_tagLibrary.Tags);
     }
 
     private void ApplyTagToSelection(string tag)
@@ -295,7 +401,7 @@ public partial class MainForm : Form
                 item.LastWriteTimeUtc = File.GetLastWriteTimeUtc(item.FilePath);
                 UpdateListViewItemText(item);
 
-                var png = await _thumbnailService.GetThumbnailAsync(item.FilePath, item.LastWriteTimeUtc, ThumbnailSize);
+                var png = await _thumbnailService.GetThumbnailAsync(item.FilePath, item.LastWriteTimeUtc, MaxThumbnailSize);
                 SetThumbnail(item, png);
             }
             catch (Exception ex)

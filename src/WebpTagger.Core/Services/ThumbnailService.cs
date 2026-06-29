@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using WebpTagger.Core.Diagnostics;
 
 namespace WebpTagger.Core.Services;
 
@@ -53,6 +54,7 @@ public sealed class ThumbnailService : IThumbnailService
         {
             // The disk cache is a best-effort optimization; the in-memory
             // cache entry above is sufficient for the current session.
+            DiagnosticsLog.Write($"Thumbnail disk cache write failed for \"{filePath}\": {ex.GetType().Name}: {ex.Message}");
         }
 
         return png;

@@ -18,9 +18,12 @@ partial class MainForm
     private Panel topPanel = null!;
     private Button btnOpenFolder = null!;
     private Button btnSaveAll = null!;
+    private Button btnViewLogs = null!;
+    private Button btnEditTags = null!;
     private Label lblFolderPath = null!;
     private SplitContainer mainSplitContainer = null!;
     private ListView listViewImages = null!;
+    private TrackBar zoomTrackBar = null!;
     private ImageList imageListThumbnails = null!;
     private SplitContainer rightSplitContainer = null!;
     private Controls.TagEditorPanel tagEditorPanel = null!;
@@ -37,9 +40,12 @@ partial class MainForm
         topPanel = new Panel();
         btnOpenFolder = new Button();
         btnSaveAll = new Button();
+        btnViewLogs = new Button();
+        btnEditTags = new Button();
         lblFolderPath = new Label();
         mainSplitContainer = new SplitContainer();
         listViewImages = new ListView();
+        zoomTrackBar = new TrackBar();
         imageListThumbnails = new ImageList(components);
         rightSplitContainer = new SplitContainer();
         tagEditorPanel = new Controls.TagEditorPanel();
@@ -63,6 +69,8 @@ partial class MainForm
         // topPanel
         //
         topPanel.Controls.Add(lblFolderPath);
+        topPanel.Controls.Add(btnViewLogs);
+        topPanel.Controls.Add(btnEditTags);
         topPanel.Controls.Add(btnSaveAll);
         topPanel.Controls.Add(btnOpenFolder);
         topPanel.Dock = DockStyle.Top;
@@ -81,6 +89,18 @@ partial class MainForm
         btnSaveAll.Width = 100;
         btnSaveAll.Text = "Save All";
         //
+        // btnEditTags
+        //
+        btnEditTags.Dock = DockStyle.Right;
+        btnEditTags.Width = 100;
+        btnEditTags.Text = "Edit Tags...";
+        //
+        // btnViewLogs
+        //
+        btnViewLogs.Dock = DockStyle.Right;
+        btnViewLogs.Width = 90;
+        btnViewLogs.Text = "View Logs";
+        //
         // lblFolderPath
         //
         lblFolderPath.AutoEllipsis = true;
@@ -96,6 +116,7 @@ partial class MainForm
         mainSplitContainer.Size = new Size(1000, 586);
         mainSplitContainer.SplitterDistance = 650;
         mainSplitContainer.Panel1.Controls.Add(listViewImages);
+        mainSplitContainer.Panel1.Controls.Add(zoomTrackBar);
         mainSplitContainer.Panel2.Controls.Add(rightSplitContainer);
         //
         // listViewImages
@@ -107,10 +128,20 @@ partial class MainForm
         listViewImages.UseCompatibleStateImageBehavior = false;
         listViewImages.View = View.LargeIcon;
         //
+        // zoomTrackBar
+        //
+        zoomTrackBar.Dock = DockStyle.Bottom;
+        zoomTrackBar.Minimum = 48;
+        zoomTrackBar.Maximum = 256;
+        zoomTrackBar.SmallChange = 8;
+        zoomTrackBar.LargeChange = 32;
+        zoomTrackBar.TickFrequency = 16;
+        zoomTrackBar.Value = 128;
+        //
         // imageListThumbnails
         //
         imageListThumbnails.ColorDepth = ColorDepth.Depth32Bit;
-        imageListThumbnails.ImageSize = new Size(128, 128);
+        imageListThumbnails.ImageSize = new Size(256, 256);
         //
         // rightSplitContainer
         //

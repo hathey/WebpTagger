@@ -1,9 +1,27 @@
 <Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
   <Folder Name="/src/">
-    <Project Path="src/WebpTagger.Core/WebpTagger.Core.csproj" />
-    <Project Path="src/WebpTagger.UI/WebpTagger.UI.csproj" />
+    <Project Path="src/WebpTagger.Core/WebpTagger.Core.csproj">
+      <BuildType Project="Release" />
+      <Platform Solution="Release|x64" Project="x64" />
+    </Project>
+    <Project Path="src/WebpTagger.UI/WebpTagger.UI.csproj">
+      <BuildType Project="Release" />
+      <Platform Solution="Release|x64" Project="x64" />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/WebpTagger.Tests/WebpTagger.Tests.csproj" />
+    <Project Path="tests/WebpTagger.Tests/WebpTagger.Tests.csproj">
+      <BuildType Solution="Debug|x64" Project="Release" />
+    </Project>
   </Folder>
+  <Project Path="WebpTaggerInstaller/WebpTaggerInstaller.vdproj" Type="Installer">
+    <BuildDependency Project="src/WebpTagger.Core/WebpTagger.Core.csproj" />
+    <BuildDependency Project="src/WebpTagger.UI/WebpTagger.UI.csproj" />
+    <BuildType Project="Release" />
+    <Build />
+  </Project>
 </Solution>
